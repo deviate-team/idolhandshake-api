@@ -27,6 +27,6 @@ func SetupRoutes(app *fiber.App) {
 	user.Get("/profile", handlers.GetProfile)
 
 	store := app.Group("/store")
-	store.Post("/add-ticket", handlers.CreateTicket)
-	store.Post("/all-ticket", handlers.GetAllTicket)
+	store.Post("/add-event", handlers.CreateEvent)
+	store.Get("/all-event", handlers.GetAllEvent)
 }
