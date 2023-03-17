@@ -1,8 +1,11 @@
 package routes
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"idolhandshake-api/config"
 	"idolhandshake-api/handlers"
+
+	"github.com/gofiber/fiber/v2"
+	jwtware "github.com/gofiber/jwt/v3"
 )
 
 func SetupRoutes(app *fiber.App) {
@@ -15,4 +18,11 @@ func SetupRoutes(app *fiber.App) {
 
 	auth.Post("/login", handlers.Login)
 	auth.Post("/register", handlers.Register)
+
+	user := app.Group("/user")
+
+	user.Use(jwtware.New(jwtware.Config{
+		SigningKey: []byte(config.Config("JWT_SECRET")),
+	}))
+	user.Get("/profile", handlers.GetProfile)
 }

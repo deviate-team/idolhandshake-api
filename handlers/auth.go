@@ -5,41 +5,113 @@ import (
 	"idolhandshake-api/models"
 	"idolhandshake-api/utils"
 
+	"net/mail"
+
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func Register(c *fiber.Ctx) error {
-	user := new(models.User)
-	c.BodyParser(user)
+	type Register struct {
+		Username string `json:"username"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
 
-	user.Password, _ = utils.HashPassword(user.Password)
+	body := new(Register)
 
-	response, err := config.Collections.Users.InsertOne(c.Context(), user)
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"message": "Internal Server Error",
+	if err := c.BodyParser(body); err != nil {
+		return c.Status(400).JSON(fiber.Map{})
+	}
+
+	if body.Username == "" || body.Email == "" || body.Password == "" {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "Please fill all fields",
 		})
 	}
 
-	var insertedUser bson.M
-
-	err = config.Collections.Users.FindOne(c.Context(), bson.M{"_id": response.InsertedID}).Decode(&insertedUser)
-
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"message": "Internal Server Error",
+	if _, err := mail.ParseAddress(body.Email); err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "Invalid email",
 		})
 	}
 
-	token, _ := utils.GenerateToken(insertedUser["_id"].(primitive.ObjectID))
+	var userExists bson.M
 
-	return c.Status(201).JSON(fiber.Map{
+	err := config.Collections.Users.FindOne(c.Context(), bson.M{"email": body.Email}).Decode(&userExists)
+
+	if err == nil {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "User already exists",
+		})
+	}
+
+	hashedPassword, _ := utils.HashPassword(body.Password)
+
+	user := models.User{
+		Username: body.Username,
+		Email:    body.Email,
+		Password: hashedPassword,
+	}
+
+	result, err := config.Collections.Users.InsertOne(c.Context(), user)
+
+	if err != nil {
+
+		return c.Status(500).JSON(fiber.Map{
+			"message": "Internal server error",
+		})
+	}
+
+	token, _ := utils.GenerateToken(result.InsertedID.(primitive.ObjectID))
+
+	return c.Status(200).JSON(fiber.Map{
 		"access_token": token,
 	})
 }
 
 func Login(c *fiber.Ctx) error {
-	return c.SendString("Login")
+	type Login struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	login := new(Login)
+
+	c.BodyParser(login)
+
+	if login.Email == "" || login.Password == "" {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "Please fill all fields",
+		})
+	}
+
+	if _, err := mail.ParseAddress(login.Email); err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "Invalid email",
+		})
+	}
+
+	var user bson.M
+
+	err := config.Collections.Users.FindOne(c.Context(), bson.M{"email": login.Email}).Decode(&user)
+
+	if err != nil {
+		return c.Status(401).JSON(fiber.Map{
+			"message": "Invalid credentials",
+		})
+	}
+
+	if !utils.CheckHashPassword(login.Password, user["password"].(string)) {
+		return c.Status(401).JSON(fiber.Map{
+			"message": "Invalid credentials",
+		})
+	}
+
+	token, _ := utils.GenerateToken(user["_id"].(primitive.ObjectID))
+
+	return c.Status(200).JSON(fiber.Map{
+		"access_token": token,
+	})
 }

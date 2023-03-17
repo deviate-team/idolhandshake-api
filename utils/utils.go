@@ -1,6 +1,10 @@
 package utils
 
 import (
+	"time"
+
+	"idolhandshake-api/config"
+
 	"github.com/golang-jwt/jwt/v4"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
@@ -18,10 +22,11 @@ func CheckHashPassword(password, hash string) bool {
 
 func GenerateToken(id primitive.ObjectID) (string, error) {
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id": id,
+		"id":  id,
+		"exp": jwt.TimeFunc().Add(24 * time.Hour).Unix(),
 	})
 
-	token, err := claims.SignedString([]byte("secret"))
+	token, err := claims.SignedString([]byte(config.Config("JWT_SECRET")))
 	if err != nil {
 		return "", err
 	}
