@@ -42,9 +42,7 @@ func BuyTicket(c *fiber.Ctx) error {
 	objID, _ := primitive.ObjectIDFromHex(id)
 
 	var user bson.M
-
 	err := config.Collections.Users.FindOne(c.Context(), bson.M{"_id": objID}).Decode(&user)
-
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"message": "User does not exist",
@@ -54,25 +52,19 @@ func BuyTicket(c *fiber.Ctx) error {
 	eventID, _ := primitive.ObjectIDFromHex(body.EventID)
 
 	var event bson.M
-
 	err = config.Collections.Events.FindOne(c.Context(), bson.M{"_id": eventID}).Decode(&event)
-
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"message": "Event does not exist",
 		})
 	}
 
-	ticketID, _ := primitive.ObjectIDFromHex(body.TicketID)
+	title := event["event_title"]
 
 	var ticket bson.M
-	var ticketIndex int
-
-	for i, t := range event["ticket"].([]interface{}) {
-		if t.(primitive.ObjectID) == ticketID {
+	for _, t := range event["tickets"].(primitive.A) {
+		if t.(bson.M)["ticket_id"] == body.TicketID {
 			ticket = t.(bson.M)
-			ticketIndex = i
-			break
 		}
 	}
 
@@ -82,37 +74,37 @@ func BuyTicket(c *fiber.Ctx) error {
 		})
 	}
 
-	if ticket["quantity"].(int) < body.Quantity {
+	if ticketQuantity, ok := ticket["ticket_quantity"].(int32); !ok || int(ticketQuantity) < body.Quantity {
 		return c.Status(400).JSON(fiber.Map{
-			"message": "Ticket is not available",
+			"message": "Not enough tickets",
 		})
 	}
 
-	ticket["quantity"] = ticket["quantity"].(int) - body.Quantity
-
-	event["ticket"].([]interface{})[ticketIndex] = ticket
-
-	_, err = config.Collections.Events.UpdateOne(c.Context(), bson.M{"_id": eventID}, bson.M{"$set": event})
-
-	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"message": "Internal server error",
-		})
+	if qty, ok := ticket["ticket_quantity"].(int32); ok {
+		ticket["ticket_quantity"] = int(qty) - body.Quantity
 	}
 
-	ticket["event_id"] = eventID
-	ticket["user_id"] = objID
-	ticket["quantity"] = body.Quantity
-	ticket["event_image"] = event["image"]
-	ticket["event_name"] = event["name"]
-	ticket["price"] = ticket["price"].(int) * body.Quantity
+	_, err = config.Collections.BuyTickets.InsertOne(c.Context(), bson.M{
+		"event_id":        eventID,
+		"ticket_id":       body.TicketID,
+		"ticket_quantity": body.Quantity,
+		"user_id":         objID,
+		"price":           ticket["price"],
+		"image":           event["event_image"],
+		"ticket_name":     title,
+	})
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{})
+	}
 
-	_, err = config.Collections.BuyTickets.InsertOne(c.Context(), ticket)
+	_, err = config.Collections.Events.UpdateOne(c.Context(), bson.M{"_id": eventID}, bson.M{
+		"$set": bson.M{
+			"tickets": event["tickets"],
+		},
+	})
 
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{
-			"message": "Internal server error",
-		})
+		return c.Status(400).JSON(fiber.Map{})
 	}
 
 	return c.Status(200).JSON(fiber.Map{

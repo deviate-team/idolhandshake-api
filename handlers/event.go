@@ -61,14 +61,12 @@ func CreateEvent(c *fiber.Ctx) error {
 
 	var tickets []bson.M
 
-	uuid := (uuid.New()).String()
-
 	for _, ticket := range body.Ticket {
 		tickets = append(tickets, bson.M{
 			"ticket_name":     ticket.Name,
 			"ticket_quantity": ticket.Quantity,
 			"price":           ticket.Price,
-			"ticket_id":       uuid,
+			"ticket_id":       (uuid.New()).String(),
 		})
 	}
 
@@ -152,6 +150,8 @@ func DeleteEvent(c *fiber.Ctx) error {
 			"message": "Something went wrong",
 		})
 	}
+
+	
 
 	return c.Status(200).JSON(fiber.Map{
 		"message": "Event deleted",
