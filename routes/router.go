@@ -25,4 +25,8 @@ func SetupRoutes(app *fiber.App) {
 		SigningKey: []byte(config.Config("JWT_SECRET")),
 	}))
 	user.Get("/profile", handlers.GetProfile)
+
+	store := app.Group("/store")
+	store.Post("/add-ticket", handlers.CreateTicket)
+	store.Post("/all-ticket", handlers.GetAllTicket)
 }
