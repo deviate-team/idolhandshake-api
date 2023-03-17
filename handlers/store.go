@@ -11,7 +11,9 @@ import (
 // GetAllEvent
 func GetAllEvent(c *fiber.Ctx) error {
 	data, err := config.Collections.Stores.Find(c.Context(), nil)
+	
 	if err != nil {
+		fmt.Println(err)
 		return c.Status(500).JSON(fiber.Map{
 			"message": "Internal Server Error",
 		})
