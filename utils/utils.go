@@ -20,10 +20,11 @@ func CheckHashPassword(password, hash string) bool {
 	return err == nil
 }
 
-func GenerateToken(id primitive.ObjectID) (string, error) {
+func GenerateToken(id primitive.ObjectID, role string) (string, error) {
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"id":  id,
-		"exp": jwt.TimeFunc().Add(24 * time.Hour).Unix(),
+		"id":   id,
+		"exp":  jwt.TimeFunc().Add(24 * time.Hour).Unix(),
+		"role": role,
 	})
 
 	token, err := claims.SignedString([]byte(config.Config("JWT_SECRET")))

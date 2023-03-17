@@ -53,6 +53,7 @@ func Register(c *fiber.Ctx) error {
 		Username: body.Username,
 		Email:    body.Email,
 		Password: hashedPassword,
+		Role:     "customer",
 	}
 
 	result, err := config.Collections.Users.InsertOne(c.Context(), user)
@@ -64,7 +65,7 @@ func Register(c *fiber.Ctx) error {
 		})
 	}
 
-	token, _ := utils.GenerateToken(result.InsertedID.(primitive.ObjectID))
+	token, _ := utils.GenerateToken(result.InsertedID.(primitive.ObjectID), "customer")
 
 	return c.Status(200).JSON(fiber.Map{
 		"access_token": token,
@@ -109,7 +110,7 @@ func Login(c *fiber.Ctx) error {
 		})
 	}
 
-	token, _ := utils.GenerateToken(user["_id"].(primitive.ObjectID))
+	token, _ := utils.GenerateToken(user["_id"].(primitive.ObjectID), user["role"].(string))
 
 	return c.Status(200).JSON(fiber.Map{
 		"access_token": token,
