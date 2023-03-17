@@ -33,6 +33,7 @@ func SetupRoutes(app *fiber.App) {
 	}))
 
 	event.Post("/", handlers.CreateEvent)
+	event.Put("/:id", handlers.UpdateEvents)
 	event.Get("/:id", handlers.GetEvent)
 	event.Get("/", handlers.GetEvents)
 	event.Delete("/:id", handlers.DeleteEvent)
