@@ -1,6 +1,13 @@
 version: '3'
-
 services:
+  backend:
+      build: .
+      ports:
+        - "3000:3000"
+      depends_on:
+        - mongo
+      env_file:
+        - .env
   mongo:
     image: mongo
     container_name: mongo
@@ -9,6 +16,17 @@ services:
       - "27017:27017"
     volumes:
       - ./mongo-data:/data/db
+    
+  s3:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./storage/minio:/data
+    environment:
+      MINIO_ACCESS_KEY: minio_access_key
+      MINIO_SECRET_KEY: minio_secret_key
+    command: server --address 0.0.0.0:9000 /data
 
   redis:
     image: redis
