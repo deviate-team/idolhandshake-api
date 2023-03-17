@@ -111,6 +111,80 @@ func GetEvent(c *fiber.Ctx) error {
 	})
 }
 
+func UpdateEvents(c *fiber.Ctx) error {
+	eventID := c.Params("id")
+
+	objID, _ := primitive.ObjectIDFromHex(eventID)
+
+	var event bson.M
+	err := config.Collections.Events.FindOne(c.Context(), bson.M{"_id": objID}).Decode(&event)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "Event does not exist",
+		})
+	}
+
+	type Ticket struct {
+		Name     string `json:"name"`
+		Price    int    `json:"price"`
+		Quantity int    `json:"quantity"`
+	}
+
+	type Event struct {
+		Name        string   `json:"name"`
+		Description string   `json:"description"`
+		Location    string   `json:"location"`
+		Date        string   `json:"date"`
+		Time        string   `json:"time"`
+		Image       string   `json:"image"`
+		Ticket      []Ticket `json:"ticket"`
+	}
+
+	body := new(Event)
+
+	if err := c.BodyParser(body); err != nil {
+		return c.Status(400).JSON(fiber.Map{})
+	}
+
+	if body.Name == "" || body.Description == "" || body.Location == "" || body.Date == "" || body.Time == "" || body.Image == "" || body.Ticket == nil {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "Please fill all fields",
+		})
+	}
+
+	var tickets []bson.M
+
+	for _, ticket := range body.Ticket {
+		tickets = append(tickets, bson.M{
+			"ticket_name":     ticket.Name,
+			"ticket_quantity": ticket.Quantity,
+			"price":           ticket.Price,
+		})
+	}
+
+	_, err = config.Collections.Events.UpdateOne(c.Context(), bson.M{"_id": objID}, bson.M{
+		"$set": bson.M{
+			"event_title":       body.Name,
+			"event_description": body.Description,
+			"event_location":    body.Location,
+			"event_date":        body.Date,
+			"event_time":        body.Time,
+			"event_image":       body.Image,
+			"tickets":           tickets,
+		},
+	})
+
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "Something went wrong",
+		})
+	}
+
+	return c.Status(200).JSON(fiber.Map{
+		"message": "Event updated",
+	})
+}
+
 func GetEvents(c *fiber.Ctx) error {
 	var events []bson.M
 	cursor, err := config.Collections.Events.Find(c.Context(), bson.M{})
@@ -150,8 +224,6 @@ func DeleteEvent(c *fiber.Ctx) error {
 			"message": "Something went wrong",
 		})
 	}
-
-	
 
 	return c.Status(200).JSON(fiber.Map{
 		"message": "Event deleted",
