@@ -54,6 +54,7 @@ func Register(c *fiber.Ctx) error {
 		Email:    body.Email,
 		Password: hashedPassword,
 		Role:     "customer",
+		Money:    0,
 	}
 
 	result, err := config.Collections.Users.InsertOne(c.Context(), user)

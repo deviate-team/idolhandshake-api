@@ -26,7 +26,23 @@ func SetupRoutes(app *fiber.App) {
 	}))
 	user.Get("/profile", handlers.GetProfile)
 
-	store := app.Group("/store")
-	store.Post("/add-event", handlers.CreateEvent)
-	store.Get("/all-event", handlers.GetAllEvent)
+	event := app.Group("/event")
+
+	event.Use(jwtware.New(jwtware.Config{
+		SigningKey: []byte(config.Config("JWT_SECRET")),
+	}))
+
+	event.Post("/", handlers.CreateEvent)
+	event.Get("/:id", handlers.GetEvent)
+	event.Get("/", handlers.GetEvents)
+	event.Delete("/:id", handlers.DeleteEvent)
+
+	ticket := app.Group("/ticket")
+
+	ticket.Use(jwtware.New(jwtware.Config{
+		SigningKey: []byte(config.Config("JWT_SECRET")),
+	}))
+
+	ticket.Post("/", handlers.BuyTicket)
+
 }

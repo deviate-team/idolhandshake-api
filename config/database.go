@@ -10,8 +10,9 @@ import (
 )
 
 type DatabaseCollection struct {
-	Users  *mongo.Collection
-	Stores *mongo.Collection
+	Users      *mongo.Collection
+	Events     *mongo.Collection
+	BuyTickets *mongo.Collection
 }
 
 var Collections DatabaseCollection
@@ -33,15 +34,18 @@ func ConnectDB() error {
 	db := client.Database(Config("MONGO_DB"))
 
 	usersCollection := db.Collection("users")
-	StoresCollection := db.Collection("stores")
+	eventsCollection := db.Collection("events")
+	buyTicketsCollection := db.Collection("buyTickets")
+
 	if err != nil {
 		fmt.Println("Error connecting to MongoDB")
 		return err
 	}
 
 	Collections = DatabaseCollection{
-		Users:  usersCollection,
-		Stores: StoresCollection,
+		Users:      usersCollection,
+		Events:     eventsCollection,
+		BuyTickets: buyTicketsCollection,
 	}
 	fmt.Println("Connected to MongoDB")
 	Client = client
