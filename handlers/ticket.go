@@ -111,3 +111,32 @@ func BuyTicket(c *fiber.Ctx) error {
 		"message": "Ticket bought",
 	})
 }
+
+func GetTicketByUserID(c *fiber.Ctx) error {
+	userClaims := c.Locals("user").(*jwt.Token)
+	claims := userClaims.Claims.(jwt.MapClaims)
+	id := claims["id"].(string)
+	role := claims["role"].(string)
+
+	if role != "customer" {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "Invalid role",
+		})
+	}
+
+	objID, _ := primitive.ObjectIDFromHex(id)
+
+	cursor, err := config.Collections.BuyTickets.Find(c.Context(), bson.M{"user_id": objID})
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{})
+	}
+
+	var tickets []bson.M
+	if err = cursor.All(c.Context(), &tickets); err != nil {
+		return c.Status(400).JSON(fiber.Map{})
+	}
+
+	return c.Status(200).JSON(fiber.Map{
+		"tickets": tickets,
+	})
+}
