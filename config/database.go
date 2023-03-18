@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -9,7 +10,9 @@ import (
 )
 
 type DatabaseCollection struct {
-	Users *mongo.Collection
+	Users      *mongo.Collection
+	Events     *mongo.Collection
+	BuyTickets *mongo.Collection
 }
 
 var Collections DatabaseCollection
@@ -19,6 +22,7 @@ var Client *mongo.Client
 func ConnectDB() error {
 	client, err := mongo.NewClient(options.Client().ApplyURI(Config("MONGO_URI")))
 	if err != nil {
+		fmt.Println("Error connecting to MongoDB")
 		return err
 	}
 
@@ -28,14 +32,22 @@ func ConnectDB() error {
 	err = client.Connect(ctx)
 
 	db := client.Database(Config("MONGO_DB"))
+
 	usersCollection := db.Collection("users")
+	eventsCollection := db.Collection("events")
+	buyTicketsCollection := db.Collection("buyTickets")
+
 	if err != nil {
+		fmt.Println("Error connecting to MongoDB")
 		return err
 	}
 
 	Collections = DatabaseCollection{
-		Users: usersCollection,
+		Users:      usersCollection,
+		Events:     eventsCollection,
+		BuyTickets: buyTicketsCollection,
 	}
+	fmt.Println("Connected to MongoDB")
 	Client = client
 	return nil
 }

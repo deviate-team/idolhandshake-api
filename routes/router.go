@@ -25,4 +25,25 @@ func SetupRoutes(app *fiber.App) {
 		SigningKey: []byte(config.Config("JWT_SECRET")),
 	}))
 	user.Get("/profile", handlers.GetProfile)
+
+	event := app.Group("/event")
+	event.Get("/:id", handlers.GetEvent)
+	event.Get("/", handlers.GetEvents)
+
+	event.Use(jwtware.New(jwtware.Config{
+		SigningKey: []byte(config.Config("JWT_SECRET")),
+	}))
+
+	event.Post("/", handlers.CreateEvent)
+	event.Put("/:id", handlers.UpdateEvents)
+	event.Delete("/:id", handlers.DeleteEvent)
+
+	ticket := app.Group("/ticket")
+
+	ticket.Use(jwtware.New(jwtware.Config{
+		SigningKey: []byte(config.Config("JWT_SECRET")),
+	}))
+
+	ticket.Post("/", handlers.BuyTicket)
+	ticket.Get("/user", handlers.GetTicketByUserID)
 }
